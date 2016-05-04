@@ -9,28 +9,40 @@ class Component(object):
         self.matrix = Matrix([[1,0], [0,1]])
 
     def __mul__(self, other):
-        new_component = copy.deepcopy(self)
-        new_component.matrix = new_component.matrix * other.matrix
-        return new_component
+        product = copy.deepcopy(self)
+        product.matrix = self.matrix * other.matrix
+        return product
 
 
-# Coupler
-coupler = Component()
-coupler.matrix = sympy.sqrt(0.5)*Matrix([[1.0, -1j], [-1j, 1.0]])
+def create_coupler():
+    comp_coupler = Component()
+    comp_coupler.matrix = sympy.sqrt(0.5) * Matrix([[1.0, -1j], [-1j, 1.0]])
+    return comp_coupler
 
-# Delay
-delay = Component()
-zm1 = Symbol("zm1")
-delay.matrix = Matrix([[zm1, 0],[0, 1]])
 
-# Phase
-phase = Component()
-phi = Symbol("phi_k")
-phase.matrix = Matrix([[exp(-1j*phi), 0],[0, 1]])
+def create_delay():
+    comp_delay = Component()
+    zm1 = Symbol("zm1")
+    comp_delay.matrix = Matrix([[zm1, 0], [0, 1]])
+    return comp_delay
+
+
+def create_phase(delay_param):
+    comp_phase = Component()
+    phi = Symbol(delay_param)
+    comp_phase.matrix = Matrix([[exp(-1j * phi), 0], [0, 1]])
+    return comp_phase
+
+
+coupler = create_coupler()
+delay = create_delay()
+phase = create_phase(delay_param="phi_1")
+
 
 def f1():
     block = phase * delay * coupler
     pprint(block.matrix)
+
 
 def main():
     f1()

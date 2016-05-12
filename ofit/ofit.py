@@ -19,7 +19,10 @@ options = {
     "delay_width": 1,
     "delay_height": 0.3,
 
-    "crosser_width": 1
+    "crosser_width": 1,
+
+    "ring_width": 1,
+    "ring_diameter": 0.8
 }
 
 
@@ -101,12 +104,24 @@ def draw_arm(start, end):
         tt(p1), tt(p2), tt(p3), tt(p4)
     )
 
-def create_coupler():
-    def draw_line(left, right):
-        return "\draw [thick] {} -- {};\n".format(
-            tt(left), tt(right)
-        )
 
+def draw_line(left, right):
+    return "\draw [thick] {} -- {};\n".format(
+        tt(left), tt(right)
+    )
+
+def draw_rect(middle: np.ndarray, width, height):
+    bottom_left = middle + a(-width/2, -height/2)
+    top_right = bottom_left + a(width, height)
+
+    draw_code = ""
+    draw_code += "\\draw [fill=white, draw=black,thick] {} rectangle{};\n".format(
+        tt(bottom_left), tt(top_right)
+    )
+    return draw_code
+
+
+def create_coupler():
     def draw_coupler_arm(left, right, height):
         parallel_width = 0.1 * options["coupler_width"]
         width = (right - left)[0]
@@ -172,29 +187,25 @@ def create_delay(location="top"):
     return comp_delay
 
 
-def create_phase(delay_param, location="top"):
-    def draw_phase(pos):
+def create_phase(phase_param, location="top"):
+    def draw_phase(pos: np.ndarray):
         p_left = pos
+        p_middle = pos + a(options["delay_width"]/2, 0)
         p_right = pos + a(options["delay_width"], 0)
 
         rect_width_frac = 0.5
         rect_width = options["delay_width"] * rect_width_frac
-        nothing_width = (options["delay_width"] - rect_width) / 2
-        p_rect_tl = p_left + a(nothing_width, options["delay_height"]/2)
-        p_rect_br = p_rect_tl + a(rect_width, -options["delay_height"])
 
         draw_code = "% drawing delay\n"
         draw_code += "\draw [thick] {} to {};\n".format(
             tt(p_right), tt(p_left)
         )
-        draw_code += "\\draw [fill=white, draw=black,thick] {} rectangle{};\n".format(
-            tt(p_rect_tl), tt(p_rect_br)
-        )
+        draw_code += draw_rect(p_middle, rect_width, options["delay_height"])
         return draw_code
 
     comp_phase = Component(schematic=Schematic(w=options["phase_width"], height_slots=1, draw_fun=draw_phase))
 
-    phi = Symbol(delay_param)
+    phi = Symbol(phase_param)
     if location == "top":
         core_matrix = np.array([[sympy.exp(-1j * phi), 0], [0, 1]], dtype=sympy.symbol.Symbol)
     elif location == "bottom":
@@ -202,8 +213,10 @@ def create_phase(delay_param, location="top"):
     else:
         raise ValueError
 
+
     comp_phase.matrix[1:3, 1:3] = core_matrix
     return comp_phase
+
 
 def create_crosser():
     def draw_crosser(pos: np.ndarray):
@@ -223,14 +236,43 @@ def create_crosser():
     return crosser
 
 
-def f1():
-    block = create_coupler() * create_delay() * create_phase(delay_param="phi")
-    block2 = create_coupler()*create_coupler()
-    block2.shift_up()
-    block3 = create_coupler()
-    block3.shift_down()
-    block = block * block2 * block3 * create_crosser()
+def create_ring(phase_param):
+    def draw_ring(pos: np.ndarray):
+        left = pos
+        right = pos + a(options["ring_width"], 0)
+        middle = pos + a(options["ring_width"]/2, 0)
+        phase_pos = middle + a(0, options["ring_diameter"])
+        ring_center = middle + a(0, options["ring_diameter"]/2)
+        ring_radius = options["ring_diameter"]/2
 
+        draw_code = "% drawing ring\n"
+        draw_code += draw_line(left, right)
+        draw_code += "\draw [thick] {} circle [radius={}];".format(
+            tt(ring_center), ring_radius
+        )
+        draw_code += draw_rect(phase_pos, options["ring_diameter"]*0.5, options["ring_diameter"]*0.2)
+
+        return draw_code
+
+    component = Component(schematic=Schematic(w=options["ring_width"], height_slots=1, draw_fun=draw_ring))
+    core_matrix = np.array([[0, 1], [1, 0]], dtype=sympy.symbol.Symbol)
+    component.matrix[1:3, 1:3] = core_matrix
+    return component
+
+
+def f1():
+    # block = create_coupler() * create_delay() * create_phase(phase_param="phi")
+    # block2 = create_coupler()*create_coupler()
+    # block2.shift_up()
+    # block3 = create_coupler()
+    # block3.shift_down()
+    # block = block * block2 * block3 * create_crosser()
+
+    # Junguji design
+    bottom_phase = create_phase("phi_1")
+    bottom_phase.shift_down()
+
+    block = bottom_phase * create_ring("phi_2") * create_coupler()
 
     print(block)
 

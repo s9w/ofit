@@ -16,7 +16,7 @@ options = {
     "unit_height": 1,
 
     # coupler
-    "coupler_width": 1,
+    "coupler_width": 0.7,
 
     # phase shifter
     "phase_width": 1,
@@ -55,14 +55,13 @@ def make_symbol(name=None) -> Symbol:
 
 
 class Schematic(object):
-    positions = [0, 0, 0, 0]
-
-    def __init__(self, w, height_slots, draw_fun, param_name=None) -> "Schematic":
+    def __init__(self, w, height_slots, draw_fun, param_name=None, draw_sep=False) -> "Schematic":
         self.draw_fun = draw_fun
         self.width = w
         self.height_slots = height_slots
         self.vpos = 0
         self.param_name = param_name
+        self.draw_sep = draw_sep
 
 
 class Component(object):
@@ -77,25 +76,36 @@ class Component(object):
         product.schematics = product.schematics + other.schematics
         return product
 
-    def draw(self):
+    def draw(self, filename="ofit_test.tex"):
         positions = [0, 0, 0, 0]
         draw_code = ""
 
         for sch in self.schematics:
+            array_index = -sch.vpos + 1
             if sch.height_slots == 2:
-                pos_x = max(positions[sch.vpos], positions[sch.vpos-1])
-                positions[sch.vpos] += sch.width
-                positions[sch.vpos-1] += sch.width
+                pos_x = max(positions[array_index], positions[array_index+1])
+                positions[array_index] = pos_x + sch.width
+                positions[array_index+1] = pos_x + sch.width
             elif sch.height_slots == 1:
-                pos_x = positions[sch.vpos]
-                positions[sch.vpos] += sch.width
+                pos_x = positions[array_index]
+                positions[array_index] += sch.width
             else:
                 raise ValueError
 
             pos = a(pos_x, sch.vpos)
             draw_code += sch.draw_fun(pos, param_name=sch.param_name) + "\n"
+            if sch.draw_sep:
+                p1 = a(pos_x, -2)
+                p2 = a(pos_x, 1)
+                draw_code += "\draw [dashed] {} -- {};\n % xxx".format(
+                    tt(p1), tt(p2)
+                )
 
-        return draw_code
+        with open(filename, "w") as f:
+            write_string = r"""\begin{{tikzpicture}}
+{}\end{{tikzpicture}}
+        """.format(draw_code)
+            f.write(write_string)
 
     def shift_matrix(self, direction):
         shift_amount = {"up": -1, "down": 1}[direction]
@@ -119,7 +129,7 @@ class Component(object):
 def draw_arm(start, end):
     total_width = (end - start)[0]
     height = (end - start)[1]
-    arm_frac = 0.9
+    arm_frac = 0.95
     middle_width = total_width * arm_frac
     lead_width = (total_width - middle_width) / 2
 
@@ -180,7 +190,10 @@ def create_coupler():
         return draw_code
 
     comp_coupler = Component(
-        schematic=Schematic(w=options["coupler_width"], height_slots=2, draw_fun=draw_coupler)
+        schematic=Schematic(w=options["coupler_width"],
+        height_slots=2,
+        draw_fun=draw_coupler
+        )
     )
     core_matrix = sympy.sqrt(0.5) * np.array([[1.0, -1j], [-1j, 1.0]], dtype=sympy.symbol.Symbol)
     comp_coupler.matrix[1:3, 1:3] = core_matrix
@@ -188,8 +201,8 @@ def create_coupler():
     return comp_coupler
 
 
-def create_delay(location="top"):
-    def draw_delay(pos: np.ndarray):
+def create_delay(location="top", draw_sep=False):
+    def draw_delay(pos: np.ndarray, **kwargs):
         delay_width_frac = 0.5
         delay_main_width = delay_width_frac * options["delay_width"]
         straight_width = (options["delay_width"] - delay_main_width) / 2
@@ -203,7 +216,12 @@ def create_delay(location="top"):
         )
 
     comp_delay = Component(
-        schematic=Schematic(w=options["delay_width"], height_slots=1, draw_fun=draw_delay)
+        schematic=Schematic(
+            w=options["delay_width"],
+            height_slots=1,
+            draw_fun=draw_delay,
+            draw_sep=draw_sep
+        )
     )
 
     if location == "top":
@@ -223,7 +241,7 @@ def texify_param(param_name):
     else:
         return param_name
 
-def create_phase(phase_param:str =None, location="top"):
+def create_phase(phase_param:str =None, location="top", draw_sep=False):
     def draw_phase(pos: np.ndarray, param_name):
         p_left = pos
         p_middle = pos + a(options["delay_width"]/2, 0)
@@ -245,7 +263,13 @@ def create_phase(phase_param:str =None, location="top"):
 
     phi = make_symbol(phase_param)
     comp_phase = Component(
-        schematic=Schematic(w=options["phase_width"], height_slots=1, draw_fun=draw_phase, param_name=phi.name)
+        schematic=Schematic(
+            w=options["phase_width"],
+            height_slots=1,
+            draw_fun=draw_phase,
+            param_name=phi.name,
+            draw_sep=draw_sep
+        )
     )
 
 
@@ -260,7 +284,7 @@ def create_phase(phase_param:str =None, location="top"):
     return comp_phase
 
 
-def create_crosser():
+def create_crosser(draw_sep=False):
     def draw_crosser(pos: np.ndarray):
         top_left = pos
         top_right = pos + a(options["crosser_width"], 0)
@@ -273,14 +297,19 @@ def create_crosser():
         return draw_code
 
     crosser = Component(
-        schematic=Schematic(w=options["crosser_width"], height_slots=2, draw_fun=draw_crosser)
+        schematic=Schematic(
+            w=options["crosser_width"],
+            height_slots=2,
+            draw_fun=draw_crosser,
+            draw_sep=draw_sep
+        )
     )
     core_matrix = np.array([[0, 1], [1, 0]], dtype=sympy.symbol.Symbol)
     crosser.matrix[1:3, 1:3] = core_matrix
     return crosser
 
 
-def create_ring(phase_param=None, gamma=1.0):
+def create_ring(phase_param=None, gamma=1.0, draw_sep=False):
     def draw_ring(pos: np.ndarray, param_name):
         left = pos
         right = pos + a(options["ring_width"], 0)
@@ -310,12 +339,48 @@ def create_ring(phase_param=None, gamma=1.0):
     core_matrix = np.array([[transfer_func, 0], [0, 1]], dtype=sympy.symbol.Symbol)
 
     component = Component(
-        schematic=Schematic(w=options["ring_width"], height_slots=1, draw_fun=draw_ring, param_name=phase_factor.name)
+        schematic=Schematic(
+            w=options["ring_width"],
+            height_slots=1,
+            draw_fun=draw_ring,
+            param_name=phase_factor.name,
+            draw_sep=draw_sep
+        )
     )
 
     component.matrix[1:3, 1:3] = core_matrix
     return component
 
+def junguji96():
+    def generate_unit():
+        bottom_phase = create_phase(draw_sep=True)
+        bottom_phase.shift_down()
+        return bottom_phase * create_ring() * create_coupler()
+
+    n = 4
+    lattice = create_coupler()
+    for i in range(n):
+        lattice = lattice * generate_unit()
+
+    lattice.draw()
+
+def OM04():
+    def generate_unit():
+        delay = create_delay(draw_sep=True)
+        bottom_phase = create_phase()
+        bottom_phase.shift_down()
+        mzi = create_coupler() * create_phase() * create_coupler()
+        return delay * bottom_phase * mzi
+
+    n=2
+    bottom_phase = create_phase()
+    bottom_phase.shift_down()
+    mzi = create_coupler() * create_phase() * create_coupler()
+    lattice = bottom_phase * mzi
+    for i in range(n):
+        lattice = lattice * generate_unit()
+
+    lattice.draw()
 
 def f1():
     # block = create_coupler() * create_delay() * create_phase(phase_param="phi")
@@ -333,16 +398,18 @@ def f1():
 
     print(block)
 
-    draw_code = block.draw()
-    with open("ofit_test.tex", "w") as f:
-        write_string = r"""\begin{{tikzpicture}}
-{}\end{{tikzpicture}}
-""".format(draw_code)
-        f.write(write_string)
+    block.draw()
+#     with open("ofit_test.tex", "w") as f:
+#         write_string = r"""\begin{{tikzpicture}}
+# {}\end{{tikzpicture}}
+# """.format(draw_code)
+#         f.write(write_string)
 
 
 def main():
-    f1()
+    # f1()
+    # junguji96()
+    OM04()
     pass
 
 if __name__ == "__main__":

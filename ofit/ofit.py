@@ -1,7 +1,7 @@
 import copy
 import numpy as np
 import sympy
-from sympy import Symbol, Matrix, pprint
+from sympy import Symbol, Matrix, pprint, abc
 
 def a(x, y):
     return np.array([x, y])
@@ -10,20 +10,49 @@ def tt(np_array):
     return (np_array[0], np_array[1])
 
 options = {
+    "gamma": "gamma",
+    "zm1": sympy.exp(-1j*Symbol("omega")*Symbol("tau")),
+
     "unit_height": 1,
 
+    # coupler
     "coupler_width": 1,
 
+    # phase shifter
     "phase_width": 1,
 
+    # delay
     "delay_width": 1,
     "delay_height": 0.3,
 
+    # crossing element
     "crosser_width": 1,
 
+    # ring
     "ring_width": 1,
     "ring_diameter": 0.8
 }
+
+used_names = set()
+
+
+def make_symbol(name=None) -> Symbol:
+    # create automatic name
+    if not name:
+        symbol = None
+        for i in range(999):
+            name = "phi_{}".format(i)
+            if name not in used_names:
+                used_names.add(name)
+                return Symbol(name)
+
+    # check if name isn't already used
+    else:
+        if name in used_names:
+            raise ValueError("Filter parameter name \"{}\" already used.".format(name))
+        else:
+            used_names.add(name)
+            return Symbol(name)
 
 
 class Schematic(object):
@@ -34,8 +63,6 @@ class Schematic(object):
         self.width = w
         self.height_slots = height_slots
         self.vpos = 0
-
-        self.id = np.random.randint(0, 99)
 
 
 class Component(object):
@@ -110,6 +137,7 @@ def draw_line(left, right):
         tt(left), tt(right)
     )
 
+
 def draw_rect(middle: np.ndarray, width, height):
     bottom_left = middle + a(-width/2, -height/2)
     top_right = bottom_left + a(width, height)
@@ -151,8 +179,10 @@ def create_coupler():
         draw_code += draw_coupler_arm(p_bottom_left, p_bottom_right, arm_height)
         return draw_code
 
-    comp_coupler = Component(schematic=Schematic(w=options["coupler_width"], height_slots=2, draw_fun=draw_coupler))
-    core_matrix = np.sqrt(0.5) * np.array([[1.0, -1j], [-1j, 1.0]], dtype=sympy.symbol.Symbol)
+    comp_coupler = Component(
+        schematic=Schematic(w=options["coupler_width"], height_slots=2, draw_fun=draw_coupler)
+    )
+    core_matrix = sympy.sqrt(0.5) * np.array([[1.0, -1j], [-1j, 1.0]], dtype=sympy.symbol.Symbol)
     comp_coupler.matrix[1:3, 1:3] = core_matrix
 
     return comp_coupler
@@ -172,13 +202,14 @@ def create_delay(location="top"):
             tt(p1), tt(p2), tt(p3), tt(p4), tt(p5)
         )
 
-    comp_delay = Component(schematic=Schematic(w=options["delay_width"], height_slots=1, draw_fun=draw_delay))
+    comp_delay = Component(
+        schematic=Schematic(w=options["delay_width"], height_slots=1, draw_fun=draw_delay)
+    )
 
-    zm1 = Symbol("zm1")
     if location == "top":
-        core_matrix = np.array([[zm1, 0], [0, 1]], dtype=sympy.symbol.Symbol)
+        core_matrix = np.array([[options["zm1"], 0], [0, 1]], dtype=sympy.symbol.Symbol)
     elif location == "bottom":
-        core_matrix = np.array([[1, 0], [0, zm1]], dtype=sympy.symbol.Symbol)
+        core_matrix = np.array([[1, 0], [0, options["zm1"]]], dtype=sympy.symbol.Symbol)
     else:
         raise ValueError
 
@@ -187,7 +218,7 @@ def create_delay(location="top"):
     return comp_delay
 
 
-def create_phase(phase_param, location="top"):
+def create_phase(phase_param=None, location="top"):
     def draw_phase(pos: np.ndarray):
         p_left = pos
         p_middle = pos + a(options["delay_width"]/2, 0)
@@ -203,16 +234,17 @@ def create_phase(phase_param, location="top"):
         draw_code += draw_rect(p_middle, rect_width, options["delay_height"])
         return draw_code
 
-    comp_phase = Component(schematic=Schematic(w=options["phase_width"], height_slots=1, draw_fun=draw_phase))
+    comp_phase = Component(
+        schematic=Schematic(w=options["phase_width"], height_slots=1, draw_fun=draw_phase)
+    )
 
-    phi = Symbol(phase_param)
+    phi = make_symbol(phase_param)
     if location == "top":
         core_matrix = np.array([[sympy.exp(-1j * phi), 0], [0, 1]], dtype=sympy.symbol.Symbol)
     elif location == "bottom":
         core_matrix = np.array([[1, 0], [0, sympy.exp(-1j * phi)]], dtype=sympy.symbol.Symbol)
     else:
         raise ValueError
-
 
     comp_phase.matrix[1:3, 1:3] = core_matrix
     return comp_phase
@@ -230,13 +262,15 @@ def create_crosser():
         draw_code += draw_arm(bottom_left, top_right)
         return draw_code
 
-    crosser = Component(schematic=Schematic(w=options["crosser_width"], height_slots=2, draw_fun=draw_crosser))
-    core_matrix = np.array([[0,1], [1,0]], dtype=sympy.symbol.Symbol)
+    crosser = Component(
+        schematic=Schematic(w=options["crosser_width"], height_slots=2, draw_fun=draw_crosser)
+    )
+    core_matrix = np.array([[0, 1], [1, 0]], dtype=sympy.symbol.Symbol)
     crosser.matrix[1:3, 1:3] = core_matrix
     return crosser
 
 
-def create_ring(phase_param):
+def create_ring(phase_param=None, gamma=1.0):
     def draw_ring(pos: np.ndarray):
         left = pos
         right = pos + a(options["ring_width"], 0)
@@ -247,15 +281,24 @@ def create_ring(phase_param):
 
         draw_code = "% drawing ring\n"
         draw_code += draw_line(left, right)
-        draw_code += "\draw [thick] {} circle [radius={}];".format(
+        draw_code += "\draw [thick] {} circle [radius={}];\n".format(
             tt(ring_center), ring_radius
         )
         draw_code += draw_rect(phase_pos, options["ring_diameter"]*0.5, options["ring_diameter"]*0.2)
 
         return draw_code
 
-    component = Component(schematic=Schematic(w=options["ring_width"], height_slots=1, draw_fun=draw_ring))
-    core_matrix = np.array([[0, 1], [1, 0]], dtype=sympy.symbol.Symbol)
+    component = Component(
+        schematic=Schematic(w=options["ring_width"], height_slots=1, draw_fun=draw_ring)
+    )
+
+    # transfer function
+    c = sympy.sqrt(0.5)
+    phase_factor = sympy.exp(-sympy.I * make_symbol(phase_param))
+    zm1 = options["zm1"]
+    transfer_func = (c-gamma*zm1*phase_factor)/(1-c*gamma*zm1*phase_factor)
+    core_matrix = np.array([[transfer_func, 0], [0, 1]], dtype=sympy.symbol.Symbol)
+
     component.matrix[1:3, 1:3] = core_matrix
     return component
 
@@ -269,10 +312,10 @@ def f1():
     # block = block * block2 * block3 * create_crosser()
 
     # Junguji design
-    bottom_phase = create_phase("phi_1")
+    bottom_phase = create_phase()
     bottom_phase.shift_down()
 
-    block = bottom_phase * create_ring("phi_2") * create_coupler()
+    block = bottom_phase * create_ring() * create_coupler()
 
     print(block)
 

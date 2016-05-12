@@ -21,10 +21,10 @@ options = {
     "coupler_width": 0.7,
 
     # phase shifter
-    "phase_width": 1,
+    "phase_width": 0.5,
 
     # delay
-    "delay_width": 1,
+    "delay_width": 0.8,
     "delay_height": 0.3,
 
     # crossing element
@@ -71,11 +71,11 @@ def draw_delay(pos: np.ndarray, **kwargs):
 
 def draw_phase(pos: np.ndarray, param_name):
     p_left = pos
-    p_middle = pos + a(options["delay_width"] / 2, 0)
-    p_right = pos + a(options["delay_width"], 0)
+    p_middle = pos + a(options["phase_width"] / 2, 0)
+    p_right = pos + a(options["phase_width"], 0)
 
-    rect_width_frac = 0.5
-    rect_width = options["delay_width"] * rect_width_frac
+    rect_width_frac = 0.8
+    rect_width = options["phase_width"] * rect_width_frac
 
     draw_code = "% drawing delay\n"
     draw_code += "\draw [thick] {} to {};\n".format(
@@ -140,7 +140,7 @@ def make_symbol(name=None) -> Symbol:
     # create automatic name
     if not name:
         for i in range(999):
-            name = "phi_{}".format(i)
+            name = "phi_{{{}}}".format(i)
             if name not in used_names:
                 used_names.add(name)
                 return Symbol(name)
@@ -429,7 +429,7 @@ def f1():
 def main():
     # f1()
     # junguji96()
-    OM04()
+    OM04(n=7)
     pass
 
 if __name__ == "__main__":

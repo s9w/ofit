@@ -1,6 +1,7 @@
 import copy
 import numpy as np
 import sympy
+import math
 from sympy import Symbol, Matrix, pprint
 
 def a(x, y):
@@ -36,10 +37,12 @@ options = {
 
 used_names = set()
 
+
 def draw_line(left, right):
     return "\draw [thick] {} -- {};\n".format(
         tt(left), tt(right)
     )
+
 
 def draw_rect(middle: np.ndarray, width, height):
     bottom_left = middle + a(-width/2, -height/2)
@@ -50,6 +53,7 @@ def draw_rect(middle: np.ndarray, width, height):
         tt(bottom_left), tt(top_right)
     )
     return draw_code
+
 
 def draw_delay(pos: np.ndarray, **kwargs):
     delay_width_frac = 0.5
@@ -84,6 +88,7 @@ def draw_phase(pos: np.ndarray, param_name):
     )
     return draw_code
 
+
 def draw_arm(start, end):
     total_width = (end - start)[0]
     height = (end - start)[1]
@@ -98,6 +103,7 @@ def draw_arm(start, end):
     return "\draw [thick] {} to [out=0,in=180] {} to [in=180,out=0] {} to {};\n".format(
         tt(p1), tt(p2), tt(p3), tt(p4)
     )
+
 
 def draw_coupler_arm(left, right, height):
     parallel_width = 0.1 * options["coupler_width"]
@@ -177,7 +183,18 @@ class Component(object):
         for sch in self.schematics:
             array_index = -sch.vpos + 1
             if sch.height_slots == 2:
+                x1 = positions[array_index]
+                x2 = positions[array_index+1]
                 pos_x = max(positions[array_index], positions[array_index+1])
+
+                # leftover space to cover with line
+                if not math.isclose(x1, x2):
+                    if x1 < x2:
+                        y = 1 - array_index
+                    else:
+                        y = 1 - (array_index+1)
+                    draw_code += draw_line(a(x1, y), a(x2, y))
+
                 positions[array_index] = pos_x + sch.width
                 positions[array_index+1] = pos_x + sch.width
             elif sch.height_slots == 1:
@@ -284,6 +301,10 @@ def create_phase(phase_param: str =None, location="top", draw_sep=False):
     return comp_phase
 
 
+def create_mzi():
+    return create_coupler() * create_phase() * create_coupler()
+
+
 def create_crosser(draw_sep=False):
     def draw_crosser(pos: np.ndarray):
         top_left = pos
@@ -352,13 +373,12 @@ def create_ring(phase_param=None, gamma=1.0, draw_sep=False):
     return component
 
 
-def junguji96():
+def junguji96(n=3):
     def generate_unit():
         bottom_phase = create_phase(draw_sep=True)
         bottom_phase.shift_down()
         return bottom_phase * create_ring() * create_coupler()
 
-    n = 4
     lattice = create_coupler()
     for i in range(n):
         lattice = lattice * generate_unit()
@@ -366,19 +386,16 @@ def junguji96():
     lattice.draw()
 
 
-def OM04():
+def OM04(n=3):
     def generate_unit():
         delay = create_delay(draw_sep=True)
         bottom_phase_inner = create_phase()
         bottom_phase_inner.shift_down()
-        mzi = create_coupler() * create_phase() * create_coupler()
-        return delay * bottom_phase_inner * mzi
+        return delay * bottom_phase_inner * create_mzi()
 
-    n = 2
     bottom_phase = create_phase()
     bottom_phase.shift_down()
-    mzi = create_coupler() * create_phase() * create_coupler()
-    lattice = bottom_phase * mzi
+    lattice = bottom_phase * create_mzi()
     for i in range(n):
         lattice = lattice * generate_unit()
 

@@ -17,7 +17,9 @@ options = {
     "phase_width": 1,
 
     "delay_width": 1,
-    "delay_height": 0.3
+    "delay_height": 0.3,
+
+    "crosser_width": 1
 }
 
 
@@ -54,11 +56,9 @@ class Component(object):
                 pos_x = max(positions[sch.vpos], positions[sch.vpos-1])
                 positions[sch.vpos] += sch.width
                 positions[sch.vpos-1] += sch.width
-                print("pos_x", pos_x)
             elif sch.height_slots == 1:
                 pos_x = positions[sch.vpos]
                 positions[sch.vpos] += sch.width
-                print("pos_x", pos_x)
             else:
                 raise ValueError
 
@@ -85,25 +85,26 @@ class Component(object):
     def __str__(self):
         return np.array2string(self.matrix, precision=3)
 
+
+def draw_arm(start, end):
+    total_width = (end - start)[0]
+    height = (end - start)[1]
+    arm_frac = 0.9
+    middle_width = total_width * arm_frac
+    lead_width = (total_width - middle_width) / 2
+
+    p1 = start
+    p2 = p1 + np.array([lead_width, 0])
+    p3 = p2 + np.array([middle_width, height])
+    p4 = end
+    return "\draw [thick] {} to [out=0,in=180] {} to [in=180,out=0] {} to {};\n".format(
+        tt(p1), tt(p2), tt(p3), tt(p4)
+    )
+
 def create_coupler():
     def draw_line(left, right):
         return "\draw [thick] {} -- {};\n".format(
             tt(left), tt(right)
-        )
-
-    def draw_arm(start, end):
-        total_width = (end - start)[0]
-        height = (end - start)[1]
-        arm_frac = 0.9
-        middle_width = total_width * arm_frac
-        lead_width = (total_width - middle_width) / 2
-
-        p1 = start
-        p2 = p1 + np.array([lead_width, 0])
-        p3 = p2 + np.array([middle_width, height])
-        p4 = end
-        return "\draw [thick] {} to [out=0,in=180] {} to [in=180,out=0] {} to {};\n".format(
-            tt(p1), tt(p2), tt(p3), tt(p4)
         )
 
     def draw_coupler_arm(left, right, height):
@@ -143,7 +144,6 @@ def create_coupler():
 
 
 def create_delay(location="top"):
-
     def draw_delay(pos: np.ndarray):
         delay_width_frac = 0.5
         delay_main_width = delay_width_frac * options["delay_width"]
@@ -206,7 +206,18 @@ def create_phase(delay_param, location="top"):
     return comp_phase
 
 def create_crosser():
-    crosser = Component()
+    def draw_crosser(pos: np.ndarray):
+        top_left = pos
+        top_right = pos + a(options["crosser_width"], 0)
+        bottom_left = pos + a(0, -options["unit_height"])
+        bottom_right = bottom_left + a(options["crosser_width"], 0)
+
+        draw_code = "% drawing delay\n"
+        draw_code += draw_arm(top_left, bottom_right)
+        draw_code += draw_arm(bottom_left, top_right)
+        return draw_code
+
+    crosser = Component(schematic=Schematic(w=options["crosser_width"], height_slots=2, draw_fun=draw_crosser))
     core_matrix = np.array([[0,1], [1,0]], dtype=sympy.symbol.Symbol)
     crosser.matrix[1:3, 1:3] = core_matrix
     return crosser
@@ -218,12 +229,11 @@ def f1():
     block2.shift_up()
     block3 = create_coupler()
     block3.shift_down()
-    block = block * block2 * block3
+    block = block * block2 * block3 * create_crosser()
 
 
-    # block.matrix[0,0] = 0.945672345
     print(block)
-    # print(block.schematics)
+
     draw_code = block.draw()
     with open("ofit_test.tex", "w") as f:
         write_string = r"""\begin{{tikzpicture}}

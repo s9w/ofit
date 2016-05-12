@@ -1,13 +1,14 @@
 import copy
 import numpy as np
 import sympy
-from sympy import Symbol, Matrix, pprint, abc
+from sympy import Symbol, Matrix, pprint
 
 def a(x, y):
     return np.array([x, y])
 
 def tt(np_array):
     return (np_array[0], np_array[1])
+
 
 options = {
     "gamma": "gamma",
@@ -34,6 +35,99 @@ options = {
 }
 
 used_names = set()
+
+def draw_line(left, right):
+    return "\draw [thick] {} -- {};\n".format(
+        tt(left), tt(right)
+    )
+
+def draw_rect(middle: np.ndarray, width, height):
+    bottom_left = middle + a(-width/2, -height/2)
+    top_right = bottom_left + a(width, height)
+
+    draw_code = ""
+    draw_code += "\\draw [fill=white, draw=black,thick] {} rectangle{};\n".format(
+        tt(bottom_left), tt(top_right)
+    )
+    return draw_code
+
+def draw_delay(pos: np.ndarray, **kwargs):
+    delay_width_frac = 0.5
+    delay_main_width = delay_width_frac * options["delay_width"]
+    straight_width = (options["delay_width"] - delay_main_width) / 2
+    p1 = pos
+    p2 = p1 + np.array([straight_width, 0])
+    p3 = p1 + np.array([options["delay_width"] / 2, options["delay_height"]])
+    p4 = p2 + np.array([delay_main_width, 0])
+    p5 = p4 + a(straight_width, 0)
+    return "\draw [thick] {} to [out=0,in=180] {} to [in=180,out=0] {} to [in=180,out=0] {} to {};\n".format(
+        tt(p1), tt(p2), tt(p3), tt(p4), tt(p5)
+    )
+
+
+def draw_phase(pos: np.ndarray, param_name):
+    p_left = pos
+    p_middle = pos + a(options["delay_width"] / 2, 0)
+    p_right = pos + a(options["delay_width"], 0)
+
+    rect_width_frac = 0.5
+    rect_width = options["delay_width"] * rect_width_frac
+
+    draw_code = "% drawing delay\n"
+    draw_code += "\draw [thick] {} to {};\n".format(
+        tt(p_right), tt(p_left)
+    )
+    draw_code += draw_rect(p_middle, rect_width, options["delay_height"])
+
+    draw_code += "\\node [scale=0.5] at {} {{{}}};\n".format(
+        tt(p_middle), texify_param(param_name)
+    )
+    return draw_code
+
+def draw_arm(start, end):
+    total_width = (end - start)[0]
+    height = (end - start)[1]
+    arm_frac = 0.95
+    middle_width = total_width * arm_frac
+    lead_width = (total_width - middle_width) / 2
+
+    p1 = start
+    p2 = p1 + np.array([lead_width, 0])
+    p3 = p2 + np.array([middle_width, height])
+    p4 = end
+    return "\draw [thick] {} to [out=0,in=180] {} to [in=180,out=0] {} to {};\n".format(
+        tt(p1), tt(p2), tt(p3), tt(p4)
+    )
+
+def draw_coupler_arm(left, right, height):
+    parallel_width = 0.1 * options["coupler_width"]
+    width = (right - left)[0]
+    arm_width = (width - parallel_width) / 2
+    p1 = left
+    p2 = p1 + a(arm_width, height)
+    p3 = p2 + a(parallel_width, 0)
+    p4 = right
+
+    draw_code = ""
+    draw_code += draw_arm(p1, p2)
+    draw_code += draw_line(p2, p3)
+    draw_code += draw_arm(p3, p4)
+    return draw_code
+
+
+def draw_coupler(pos: np.ndarray, **kwargs):
+    gap_frac = 0.1
+    arm_height = (1.0 - gap_frac) / 2 * options["unit_height"]
+
+    p_top_left = pos
+    p_top_right = p_top_left + a(options["coupler_width"], 0)
+    p_bottom_left = p_top_left + a(0, -options["unit_height"])
+    p_bottom_right = pos + a(options["coupler_width"], -options["unit_height"])
+
+    draw_code = "% drawing coupler\n"
+    draw_code += draw_coupler_arm(p_top_left, p_top_right, -arm_height)
+    draw_code += draw_coupler_arm(p_bottom_left, p_bottom_right, arm_height)
+    return draw_code
 
 
 def make_symbol(name=None) -> Symbol:
@@ -126,74 +220,11 @@ class Component(object):
         return np.array2string(self.matrix, precision=3)
 
 
-def draw_arm(start, end):
-    total_width = (end - start)[0]
-    height = (end - start)[1]
-    arm_frac = 0.95
-    middle_width = total_width * arm_frac
-    lead_width = (total_width - middle_width) / 2
-
-    p1 = start
-    p2 = p1 + np.array([lead_width, 0])
-    p3 = p2 + np.array([middle_width, height])
-    p4 = end
-    return "\draw [thick] {} to [out=0,in=180] {} to [in=180,out=0] {} to {};\n".format(
-        tt(p1), tt(p2), tt(p3), tt(p4)
-    )
-
-
-def draw_line(left, right):
-    return "\draw [thick] {} -- {};\n".format(
-        tt(left), tt(right)
-    )
-
-
-def draw_rect(middle: np.ndarray, width, height):
-    bottom_left = middle + a(-width/2, -height/2)
-    top_right = bottom_left + a(width, height)
-
-    draw_code = ""
-    draw_code += "\\draw [fill=white, draw=black,thick] {} rectangle{};\n".format(
-        tt(bottom_left), tt(top_right)
-    )
-    return draw_code
-
-
 def create_coupler():
-    def draw_coupler_arm(left, right, height):
-        parallel_width = 0.1 * options["coupler_width"]
-        width = (right - left)[0]
-        arm_width = (width - parallel_width) / 2
-        p1 = left
-        p2 = p1 + a(arm_width, height)
-        p3 = p2 + a(parallel_width, 0)
-        p4 = right
-
-        draw_code = ""
-        draw_code += draw_arm(p1, p2)
-        draw_code += draw_line(p2, p3)
-        draw_code += draw_arm(p3, p4)
-        return draw_code
-
-    def draw_coupler(pos: np.ndarray, **kwargs):
-        gap_frac = 0.1
-        arm_height = (1.0 - gap_frac) / 2 * options["unit_height"]
-
-        p_top_left = pos
-        p_top_right = p_top_left + a(options["coupler_width"], 0)
-        p_bottom_left = p_top_left + a(0, -options["unit_height"])
-        p_bottom_right = pos + a(options["coupler_width"], -options["unit_height"])
-
-        draw_code = "% drawing coupler\n"
-        draw_code += draw_coupler_arm(p_top_left, p_top_right, -arm_height)
-        draw_code += draw_coupler_arm(p_bottom_left, p_bottom_right, arm_height)
-        return draw_code
-
-    comp_coupler = Component(
-        schematic=Schematic(w=options["coupler_width"],
+    comp_coupler = Component(schematic=Schematic(
+        w=options["coupler_width"],
         height_slots=2,
-        draw_fun=draw_coupler
-        )
+        draw_fun=draw_coupler)
     )
     core_matrix = sympy.sqrt(0.5) * np.array([[1.0, -1j], [-1j, 1.0]], dtype=sympy.symbol.Symbol)
     comp_coupler.matrix[1:3, 1:3] = core_matrix
@@ -202,19 +233,6 @@ def create_coupler():
 
 
 def create_delay(location="top", draw_sep=False):
-    def draw_delay(pos: np.ndarray, **kwargs):
-        delay_width_frac = 0.5
-        delay_main_width = delay_width_frac * options["delay_width"]
-        straight_width = (options["delay_width"] - delay_main_width) / 2
-        p1 = pos
-        p2 = p1 + np.array([straight_width, 0])
-        p3 = p1 + np.array([options["delay_width"] / 2, options["delay_height"]])
-        p4 = p2 + np.array([delay_main_width, 0])
-        p5 = p4 + a(straight_width, 0)
-        return "\draw [thick] {} to [out=0,in=180] {} to [in=180,out=0] {} to [in=180,out=0] {} to {};\n".format(
-            tt(p1), tt(p2), tt(p3), tt(p4), tt(p5)
-        )
-
     comp_delay = Component(
         schematic=Schematic(
             w=options["delay_width"],
@@ -235,32 +253,15 @@ def create_delay(location="top", draw_sep=False):
 
     return comp_delay
 
+
 def texify_param(param_name):
     if param_name.startswith("phi"):
         return "$\\{}$".format(param_name)
     else:
         return param_name
 
-def create_phase(phase_param:str =None, location="top", draw_sep=False):
-    def draw_phase(pos: np.ndarray, param_name):
-        p_left = pos
-        p_middle = pos + a(options["delay_width"]/2, 0)
-        p_right = pos + a(options["delay_width"], 0)
 
-        rect_width_frac = 0.5
-        rect_width = options["delay_width"] * rect_width_frac
-
-        draw_code = "% drawing delay\n"
-        draw_code += "\draw [thick] {} to {};\n".format(
-            tt(p_right), tt(p_left)
-        )
-        draw_code += draw_rect(p_middle, rect_width, options["delay_height"])
-
-        draw_code += "\\node [scale=0.5] at {} {{{}}};\n".format(
-            tt(p_middle), texify_param(param_name)
-        )
-        return draw_code
-
+def create_phase(phase_param: str =None, location="top", draw_sep=False):
     phi = make_symbol(phase_param)
     comp_phase = Component(
         schematic=Schematic(
@@ -271,7 +272,6 @@ def create_phase(phase_param:str =None, location="top", draw_sep=False):
             draw_sep=draw_sep
         )
     )
-
 
     if location == "top":
         core_matrix = np.array([[sympy.exp(-1j * phi), 0], [0, 1]], dtype=sympy.symbol.Symbol)
@@ -351,6 +351,7 @@ def create_ring(phase_param=None, gamma=1.0, draw_sep=False):
     component.matrix[1:3, 1:3] = core_matrix
     return component
 
+
 def junguji96():
     def generate_unit():
         bottom_phase = create_phase(draw_sep=True)
@@ -364,15 +365,16 @@ def junguji96():
 
     lattice.draw()
 
+
 def OM04():
     def generate_unit():
         delay = create_delay(draw_sep=True)
-        bottom_phase = create_phase()
-        bottom_phase.shift_down()
+        bottom_phase_inner = create_phase()
+        bottom_phase_inner.shift_down()
         mzi = create_coupler() * create_phase() * create_coupler()
-        return delay * bottom_phase * mzi
+        return delay * bottom_phase_inner * mzi
 
-    n=2
+    n = 2
     bottom_phase = create_phase()
     bottom_phase.shift_down()
     mzi = create_coupler() * create_phase() * create_coupler()
@@ -381,6 +383,7 @@ def OM04():
         lattice = lattice * generate_unit()
 
     lattice.draw()
+
 
 def f1():
     # block = create_coupler() * create_delay() * create_phase(phase_param="phi")

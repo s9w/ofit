@@ -2,7 +2,7 @@ import copy
 import numpy as np
 import sympy
 import math
-from sympy import Symbol, Matrix
+from sympy import Symbol, Matrix, I
 
 
 def a(x, y):
@@ -14,7 +14,7 @@ def tt(np_array):
 
 options = {
     "gamma": "gamma",
-    "zm1": sympy.exp(-1j*Symbol("omega")*Symbol("tau")),
+    "zm1": sympy.exp(-I*Symbol("omega")*Symbol("tau")),
     "filename": "example_filter_tikz.tex",
 
     "unit_height": 1,
@@ -142,7 +142,7 @@ def make_symbol(name=None) -> Symbol:
     # create automatic name
     if not name:
         for i in range(999):
-            name = "phi_{{{}}}".format(i)
+            name = "phi_{}".format(i)
             if name not in used_names:
                 used_names.add(name)
                 return Symbol(name)
@@ -279,8 +279,8 @@ def create_delay(location="top", draw_sep=False):
 
 
 def texify_param(param_name):
-    if param_name.startswith("phi"):
-        return "$\\{}$".format(param_name)
+    if param_name.startswith("phi_"):
+        return "$\\phi_{{{}}}$".format(param_name[4:])
     else:
         return param_name
 
@@ -298,9 +298,9 @@ def create_phase(phase_param: str =None, location="top", draw_sep=False):
     )
 
     if location == "top":
-        core_matrix = np.array([[sympy.exp(-1j * phi), 0], [0, 1]], dtype=sympy.symbol.Symbol)
+        core_matrix = np.array([[sympy.exp(-I * phi), 0], [0, 1]], dtype=sympy.symbol.Symbol)
     elif location == "bottom":
-        core_matrix = np.array([[1, 0], [0, sympy.exp(-1j * phi)]], dtype=sympy.symbol.Symbol)
+        core_matrix = np.array([[1, 0], [0, sympy.exp(-I * phi)]], dtype=sympy.symbol.Symbol)
     else:
         raise ValueError
 
@@ -337,7 +337,7 @@ def create_crosser(draw_sep=False):
     return crosser
 
 
-def create_ring(phase_param=None, gamma=1.0, draw_sep=False):
+def create_ring(phase_param=None, gamma=sympy.S.One, draw_sep=False):
     def draw_ring(pos: np.ndarray, param_name):
         left = pos
         right = pos + a(options["ring_width"], 0)

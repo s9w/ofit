@@ -14,6 +14,7 @@ def tt(np_array):
 options = {
     "gamma": "gamma",
     "zm1": sympy.exp(-1j*Symbol("omega")*Symbol("tau")),
+    "filename": "example_filter_tikz.tex",
 
     "unit_height": 1,
 
@@ -60,9 +61,9 @@ def draw_delay(pos: np.ndarray, **kwargs):
     delay_main_width = delay_width_frac * options["delay_width"]
     straight_width = (options["delay_width"] - delay_main_width) / 2
     p1 = pos
-    p2 = p1 + np.array([straight_width, 0])
-    p3 = p1 + np.array([options["delay_width"] / 2, options["delay_height"]])
-    p4 = p2 + np.array([delay_main_width, 0])
+    p2 = p1 + a(straight_width, 0)
+    p3 = p1 + a(options["delay_width"] / 2, options["delay_height"])
+    p4 = p2 + a(delay_main_width, 0)
     p5 = p4 + a(straight_width, 0)
     return "\draw [thick] {} to [out=0,in=180] {} to [in=180,out=0] {} to [in=180,out=0] {} to {};\n".format(
         tt(p1), tt(p2), tt(p3), tt(p4), tt(p5)
@@ -97,8 +98,8 @@ def draw_arm(start, end):
     lead_width = (total_width - middle_width) / 2
 
     p1 = start
-    p2 = p1 + np.array([lead_width, 0])
-    p3 = p2 + np.array([middle_width, height])
+    p2 = p1 + a(lead_width, 0)
+    p3 = p2 + a(middle_width, height)
     p4 = end
     return "\draw [thick] {} to [out=0,in=180] {} to [in=180,out=0] {} to {};\n".format(
         tt(p1), tt(p2), tt(p3), tt(p4)
@@ -176,7 +177,7 @@ class Component(object):
         product.schematics = product.schematics + other.schematics
         return product
 
-    def draw(self, filename="ofit_test.tex"):
+    def draw(self, filename=options["filename"]):
         positions = [0, 0, 0, 0]
         draw_code = ""
 
@@ -371,66 +372,3 @@ def create_ring(phase_param=None, gamma=1.0, draw_sep=False):
 
     component.matrix[1:3, 1:3] = core_matrix
     return component
-
-
-def junguji96(n=3):
-    def generate_unit():
-        bottom_phase = create_phase(draw_sep=True)
-        bottom_phase.shift_down()
-        return bottom_phase * create_ring() * create_coupler()
-
-    lattice = create_coupler()
-    for i in range(n):
-        lattice = lattice * generate_unit()
-
-    lattice.draw()
-
-
-def OM04(n=3):
-    def generate_unit():
-        delay = create_delay(draw_sep=True)
-        bottom_phase_inner = create_phase()
-        bottom_phase_inner.shift_down()
-        return delay * bottom_phase_inner * create_mzi()
-
-    bottom_phase = create_phase()
-    bottom_phase.shift_down()
-    lattice = bottom_phase * create_mzi()
-    for i in range(n):
-        lattice = lattice * generate_unit()
-
-    lattice.draw()
-
-
-def f1():
-    # block = create_coupler() * create_delay() * create_phase(phase_param="phi")
-    # block2 = create_coupler()*create_coupler()
-    # block2.shift_up()
-    # block3 = create_coupler()
-    # block3.shift_down()
-    # block = block * block2 * block3 * create_crosser()
-
-    # Junguji design
-    bottom_phase = create_phase()
-    bottom_phase.shift_down()
-
-    block = bottom_phase * create_ring() * create_coupler()
-
-    print(block)
-
-    block.draw()
-#     with open("ofit_test.tex", "w") as f:
-#         write_string = r"""\begin{{tikzpicture}}
-# {}\end{{tikzpicture}}
-# """.format(draw_code)
-#         f.write(write_string)
-
-
-def main():
-    # f1()
-    # junguji96()
-    OM04(n=7)
-    pass
-
-if __name__ == "__main__":
-    main() # pragma: no cover

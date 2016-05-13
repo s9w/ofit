@@ -2,7 +2,8 @@ import copy
 import numpy as np
 import sympy
 import math
-from sympy import Symbol, Matrix, pprint
+from sympy import Symbol, Matrix
+
 
 def a(x, y):
     return np.array([x, y])
@@ -32,7 +33,7 @@ options = {
     "crosser_width": 1,
 
     # ring
-    "ring_width": 1,
+    "ring_width": 0.8,
     "ring_diameter": 0.8
 }
 
@@ -181,6 +182,7 @@ class Component(object):
         positions = [0, 0, 0, 0]
         draw_code = ""
 
+        separator_x_coords = []
         for sch in self.schematics:
             array_index = -sch.vpos + 1
             if sch.height_slots == 2:
@@ -207,14 +209,18 @@ class Component(object):
             pos = a(pos_x, sch.vpos)
             draw_code += sch.draw_fun(pos, param_name=sch.param_name) + "\n"
             if sch.draw_sep:
-                p1 = a(pos_x, -2)
-                p2 = a(pos_x, 1)
-                draw_code += "\draw [dashed] {} -- {};\n % xxx".format(
-                    tt(p1), tt(p2)
-                )
+                separator_x_coords.append(pos_x)
+
+        # draw separators
+        draw_code += "% drawing separators\n"
+        for pos_x in separator_x_coords:
+            draw_code += "\draw [dashed] ($ (current bounding box.north west) + ({},0) $) to ($ (current bounding box.south west) + ({},0) $);\n".format(
+                pos_x, pos_x
+            )
 
         with open(filename, "w") as f:
-            write_string = r"""\begin{{tikzpicture}}
+            write_string = r"""\usetikzlibrary{{calc}}
+\begin{{tikzpicture}}
 {}\end{{tikzpicture}}
         """.format(draw_code)
             f.write(write_string)

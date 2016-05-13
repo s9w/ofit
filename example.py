@@ -1,4 +1,6 @@
 from ofit import *
+# from ofit import cr
+# from ofit import create_coupler
 
 
 def simple_1():
@@ -36,6 +38,6 @@ def OM04(n=3):
     lattice.draw()
 
 
-simple_1()
-# junguji96(n=3)
+# simple_1()
+junguji96(n=5)
 # OM04(n=3)

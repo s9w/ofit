@@ -167,9 +167,21 @@ class Schematic(object):
 
 
 class Component(object):
-    def __init__(self, schematic: "Schematic") -> "Component":
+    def __init__(self, schematic: "Schematic", shift) -> "Component":
         self.matrix = np.eye(4, dtype=sympy.symbol.Symbol)
         self.schematics = [schematic]
+
+        if shift == 1:
+            self.shift_up()
+        elif shift == -1:
+            self.shift_down()
+        elif shift == -2:
+            self.shift_down()
+            self.shift_down()
+        elif shift == 0:
+            pass
+        else:
+            raise ValueError
 
     def __mul__(self: "Component", other: "Component") -> "Component":
         product = copy.deepcopy(self)
@@ -244,11 +256,12 @@ class Component(object):
         return np.array2string(self.matrix, precision=3)
 
 
-def create_coupler():
+def create_coupler(shift=0):
     comp_coupler = Component(schematic=Schematic(
         w=options["coupler_width"],
         height_slots=2,
-        draw_fun=draw_coupler)
+        draw_fun=draw_coupler),
+        shift=shift
     )
     core_matrix = sympy.sqrt(0.5) * np.array([[1.0, -1j], [-1j, 1.0]], dtype=sympy.symbol.Symbol)
     comp_coupler.matrix[1:3, 1:3] = core_matrix
@@ -256,14 +269,15 @@ def create_coupler():
     return comp_coupler
 
 
-def create_delay(location="top", draw_sep=False):
+def create_delay(location="top", shift=0, draw_sep=False):
     comp_delay = Component(
         schematic=Schematic(
             w=options["delay_width"],
             height_slots=1,
             draw_fun=draw_delay,
             draw_sep=draw_sep
-        )
+        ),
+        shift=shift
     )
 
     if location == "top":
@@ -285,7 +299,7 @@ def texify_param(param_name):
         return param_name
 
 
-def create_phase(phase_param: str =None, location="top", draw_sep=False):
+def create_phase(phase_param: str =None, shift=0, location="top", draw_sep=False):
     phi = make_symbol(phase_param)
     comp_phase = Component(
         schematic=Schematic(
@@ -294,7 +308,8 @@ def create_phase(phase_param: str =None, location="top", draw_sep=False):
             draw_fun=draw_phase,
             param_name=phi.name,
             draw_sep=draw_sep
-        )
+        ),
+        shift=shift
     )
 
     if location == "top":
@@ -312,8 +327,8 @@ def create_mzi():
     return create_coupler() * create_phase() * create_coupler()
 
 
-def create_crosser(draw_sep=False):
-    def draw_crosser(pos: np.ndarray):
+def create_crosser(draw_sep=False, shift=0):
+    def draw_crosser(pos: np.ndarray, **kwargs):
         top_left = pos
         top_right = pos + a(options["crosser_width"], 0)
         bottom_left = pos + a(0, -options["unit_height"])
@@ -330,14 +345,15 @@ def create_crosser(draw_sep=False):
             height_slots=2,
             draw_fun=draw_crosser,
             draw_sep=draw_sep
-        )
+        ),
+        shift=shift
     )
     core_matrix = np.array([[0, 1], [1, 0]], dtype=sympy.symbol.Symbol)
     crosser.matrix[1:3, 1:3] = core_matrix
     return crosser
 
 
-def create_ring(phase_param=None, gamma=sympy.S.One, draw_sep=False):
+def create_ring(phase_param=None, gamma=sympy.S.One, shift=0, draw_sep=False):
     def draw_ring(pos: np.ndarray, param_name):
         left = pos
         right = pos + a(options["ring_width"], 0)
@@ -373,7 +389,8 @@ def create_ring(phase_param=None, gamma=sympy.S.One, draw_sep=False):
             draw_fun=draw_ring,
             param_name=phase_factor.name,
             draw_sep=draw_sep
-        )
+        ),
+        shift=shift
     )
 
     component.matrix[1:3, 1:3] = core_matrix

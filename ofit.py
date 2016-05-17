@@ -190,6 +190,11 @@ class Component(object):
         product.schematics = product.schematics + other.schematics
         return product
 
+    def __imul__(self: "Component", other: "Component") -> "Component":
+        self.matrix = other.matrix.dot(self.matrix)
+        self.schematics = self.schematics + other.schematics
+        return self
+
     def draw(self, filename=options["filename"]):
         positions = [0, 0, 0, 0]
         draw_code = ""

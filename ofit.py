@@ -139,7 +139,7 @@ def draw_coupler(pos: np.ndarray, **kwargs):
 
 
 def make_symbol(name=None) -> Symbol:
-    # create automatic name
+    # generate automatic name
     if not name:
         for i in range(999):
             name = "phi_{}".format(i)
@@ -171,6 +171,7 @@ class Component(object):
         self.matrix = np.eye(4, dtype=sympy.symbol.Symbol)
         self.schematics = [schematic]
 
+        # initial shifting
         if shift == 1:
             self.shift_up()
         elif shift == -1:
@@ -261,7 +262,7 @@ class Component(object):
         return np.array2string(self.matrix, precision=3)
 
 
-def create_coupler(shift=0):
+def make_coupler(shift=0):
     comp_coupler = Component(schematic=Schematic(
         w=options["coupler_width"],
         height_slots=2,
@@ -274,7 +275,7 @@ def create_coupler(shift=0):
     return comp_coupler
 
 
-def create_delay(location="top", shift=0, draw_sep=False):
+def make_delay(location="top", shift=0, draw_sep=False):
     comp_delay = Component(
         schematic=Schematic(
             w=options["delay_width"],
@@ -304,7 +305,7 @@ def texify_param(param_name):
         return param_name
 
 
-def create_phase(phase_param: str =None, shift=0, location="top", draw_sep=False):
+def make_phase(phase_param: str =None, shift=0, location="top", draw_sep=False):
     phi = make_symbol(phase_param)
     comp_phase = Component(
         schematic=Schematic(
@@ -328,11 +329,11 @@ def create_phase(phase_param: str =None, shift=0, location="top", draw_sep=False
     return comp_phase
 
 
-def create_mzi():
-    return create_coupler() * create_phase() * create_coupler()
+def make_mzi():
+    return make_coupler() * make_phase() * make_coupler()
 
 
-def create_crosser(draw_sep=False, shift=0):
+def make_crosser(draw_sep=False, shift=0):
     def draw_crosser(pos: np.ndarray, **kwargs):
         top_left = pos
         top_right = pos + a(options["crosser_width"], 0)
@@ -358,7 +359,7 @@ def create_crosser(draw_sep=False, shift=0):
     return crosser
 
 
-def create_ring(phase_param=None, gamma=sympy.S.One, shift=0, draw_sep=False):
+def make_ring(phase_param=None, gamma=sympy.S.One, shift=0, draw_sep=False):
     def draw_ring(pos: np.ndarray, param_name):
         left = pos
         right = pos + a(options["ring_width"], 0)

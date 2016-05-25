@@ -14,7 +14,7 @@ def tt(np_array):
 
 options = {
     "gamma": "gamma",
-    "zm1": sympy.exp(-I*Symbol("omega")*Symbol("tau")),
+    "zm1": sympy.exp(-1j*Symbol("omega")*Symbol("tau")),
     "filename": "example_filter_tikz.tex",
 
     "unit_height": 1,
@@ -197,12 +197,15 @@ class Component(object):
         return self
 
     def draw(self, filename=options["filename"]):
+        def vpos_convert_index(x):
+            return 1-x
+
         positions = [0, 0, 0, 0]
         draw_code = ""
 
         separator_x_coords = []
         for sch in self.schematics:
-            array_index = -sch.vpos + 1
+            array_index = vpos_convert_index(sch.vpos)
             if sch.height_slots == 2:
                 x1 = positions[array_index]
                 x2 = positions[array_index+1]
@@ -260,6 +263,12 @@ class Component(object):
 
     def __str__(self):
         return np.array2string(self.matrix, precision=3)
+
+    def matrix_to_ne(self):
+        def change_complex(a):
+            return str(a).replace("I", "1j")
+        vfunc = np.vectorize(change_complex)
+        return vfunc(self.matrix[1:3, 1:3])
 
 
 def make_coupler(shift=0):
@@ -319,9 +328,9 @@ def make_phase(phase_param: str =None, shift=0, location="top", draw_sep=False):
     )
 
     if location == "top":
-        core_matrix = np.array([[sympy.exp(-I * phi), 0], [0, 1]], dtype=sympy.symbol.Symbol)
+        core_matrix = np.array([[sympy.exp(-1j * phi), 0], [0, 1]], dtype=sympy.symbol.Symbol)
     elif location == "bottom":
-        core_matrix = np.array([[1, 0], [0, sympy.exp(-I * phi)]], dtype=sympy.symbol.Symbol)
+        core_matrix = np.array([[1, 0], [0, sympy.exp(-1j * phi)]], dtype=sympy.symbol.Symbol)
     else:
         raise ValueError
 

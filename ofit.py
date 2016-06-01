@@ -142,7 +142,7 @@ def make_symbol(name=None) -> Symbol:
     # generate automatic name
     if not name:
         for i in range(999):
-            name = "phi_{}".format(i)
+            name = "phi[{}]".format(i)
             if name not in used_names:
                 used_names.add(name)
                 return Symbol(name)

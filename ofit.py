@@ -142,7 +142,7 @@ def make_symbol(name=None) -> Symbol:
     # generate automatic name
     if not name:
         for i in range(999):
-            name = "phi[{}]".format(i)
+            name = "phi_{}".format(i)
             if name not in used_names:
                 used_names.add(name)
                 return Symbol(name)
@@ -266,7 +266,7 @@ class Component(object):
 
     def matrix_to_ne(self):
         def change_complex(a):
-            return str(a).replace("I", "1j")
+            return str(a).replace("I", "ii")
         vfunc = np.vectorize(change_complex)
         return vfunc(self.matrix[1:3, 1:3])
 

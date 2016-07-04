@@ -138,6 +138,10 @@ def draw_coupler(pos: np.ndarray, **kwargs):
     return draw_code
 
 
+def get_symbol_count():
+    return len(used_names)
+
+
 def make_symbol(name=None) -> Symbol:
     # generate automatic name
     if not name:

@@ -171,9 +171,10 @@ class Schematic(object):
 
 
 class Component(object):
-    def __init__(self, schematic: "Schematic", shift) -> "Component":
+    def __init__(self, schematic: "Schematic", shift, dof=0) -> "Component":
         self.matrix = np.eye(4, dtype=sympy.symbol.Symbol)
         self.schematics = [schematic]
+        self.dof = dof
 
         # initial shifting
         if shift == 1:
@@ -193,11 +194,13 @@ class Component(object):
         product.matrix = other.matrix.dot(self.matrix)
 
         product.schematics = product.schematics + other.schematics
+        product.dof = self.dof + other.dof
         return product
 
     def __imul__(self: "Component", other: "Component") -> "Component":
         self.matrix = other.matrix.dot(self.matrix)
         self.schematics = self.schematics + other.schematics
+        self.dof = self.dof + other.dof
         return self
 
     def draw(self, filename=options["filename"]):
@@ -328,7 +331,8 @@ def make_phase(phase_param: str =None, shift=0, location="top", draw_sep=False):
             param_name=phi.name,
             draw_sep=draw_sep
         ),
-        shift=shift
+        shift=shift,
+        dof=1
     )
 
     if location == "top":
@@ -409,7 +413,8 @@ def make_ring(phase_param=None, gamma=sympy.S.One, shift=0, draw_sep=False):
             param_name=phase_factor.name,
             draw_sep=draw_sep
         ),
-        shift=shift
+        shift=shift,
+        dof=1
     )
 
     component.matrix[1:3, 1:3] = core_matrix

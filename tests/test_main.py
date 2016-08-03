@@ -1,20 +1,21 @@
 import numpy as np
 import numpy.testing as npt
 import pytest
-from ofit import ofit
+
+import ofit
 
 
 class TestClass(object):
 
     def test_wrong_usage(self):
         with pytest.raises(ValueError):
-            ofit.create_delay(location="ttop")
+            ofit.make_delay(location="ttop")
         with pytest.raises(ValueError):
-            ofit.create_phase("x", location="tofp")
+            ofit.make_phase("x", location="tofp")
 
     def test_mult(selfself):
-        cross = ofit.create_crosser()
-        coupler = ofit.create_coupler()
+        cross = ofit.make_crosser()
+        coupler = ofit.make_coupler()
         result = cross*coupler
 
         target = np.eye(4, dtype=complex)

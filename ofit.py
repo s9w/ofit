@@ -274,7 +274,7 @@ class Component(object):
         def change_complex(a):
             return str(a).replace("I", "ii")
         vfunc = np.vectorize(change_complex)
-        return vfunc(self.matrix[1:3, 1:3])
+        return vfunc(self.matrix[3:5, 3:5])
 
 
 def make_coupler(shift=0):
@@ -285,7 +285,7 @@ def make_coupler(shift=0):
         shift=shift
     )
     core_matrix = sympy.sqrt(0.5) * np.array([[1.0, -1j], [-1j, 1.0]], dtype=sympy.symbol.Symbol)
-    comp_coupler.matrix[1:3, 1:3] = core_matrix
+    comp_coupler.matrix[3:5, 3:5] = core_matrix
     comp_coupler.shift(shift=shift)
     return comp_coupler
 
@@ -302,7 +302,7 @@ def make_delay(shift=0, draw_sep=False):
     )
 
     core_matrix = np.array([[options["zm1"], 0], [0, 1]], dtype=sympy.symbol.Symbol)
-    comp_delay.matrix[1:3, 1:3] = core_matrix
+    comp_delay.matrix[3:5, 3:5] = core_matrix
     comp_delay.shift(shift=shift)
 
     return comp_delay
@@ -330,17 +330,8 @@ def make_phase(phase_param: str =None, shift=0, draw_sep=False):
     )
 
     core_matrix = np.array([[sympy.exp(-1j * phi), 0], [0, 1]], dtype=sympy.symbol.Symbol)
-    comp_phase.matrix[1:3, 1:3] = core_matrix
+    comp_phase.matrix[3:5, 3:5] = core_matrix
     comp_phase.shift(shift=shift)
-
-    # if location == "top":
-    #     core_matrix = np.array([[sympy.exp(-1j * phi), 0], [0, 1]], dtype=sympy.symbol.Symbol)
-    # elif location == "bottom":
-    #     core_matrix = np.array([[1, 0], [0, sympy.exp(-1j * phi)]], dtype=sympy.symbol.Symbol)
-    # else:
-    #     raise ValueError
-    #
-    # comp_phase.matrix[1:3, 1:3] = core_matrix
     return comp_phase
 
 
@@ -370,7 +361,8 @@ def make_crosser(draw_sep=False, shift=0):
         shift=shift
     )
     core_matrix = np.array([[0, 1], [1, 0]], dtype=sympy.symbol.Symbol)
-    crosser.matrix[1:3, 1:3] = core_matrix
+    crosser.matrix[3:5, 3:5] = core_matrix
+    crosser.shift(shift=shift)
     return crosser
 
 
@@ -415,6 +407,6 @@ def make_ring(phase_param=None, gamma=sympy.S.One, shift=0, draw_sep=False):
         dof=1
     )
 
-    component.matrix[1:3, 1:3] = core_matrix
+    component.matrix[3:5, 3:5] = core_matrix
     component.shift(shift=shift)
     return component

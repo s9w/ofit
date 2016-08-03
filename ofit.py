@@ -346,8 +346,8 @@ def make_phase(phase_param: str =None, shift=0, location="top", draw_sep=False):
     return comp_phase
 
 
-def make_mzi():
-    return make_coupler() * make_phase() * make_coupler()
+def make_mzi(shift=0):
+    return make_coupler(shift=shift) * make_phase(shift=shift) * make_coupler(shift=shift)
 
 
 def make_crosser(draw_sep=False, shift=0):

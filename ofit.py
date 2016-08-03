@@ -315,7 +315,7 @@ def texify_param(param_name):
         return param_name
 
 
-def make_phase(phase_param: str =None, shift=0, draw_sep=False):
+def make_phase(shift=0, phase_param: str =None, draw_sep=False):
     phi = make_symbol(phase_param)
     comp_phase = Component(
         schematic=Schematic(
@@ -339,7 +339,7 @@ def make_mzi(shift=0):
     return make_coupler(shift=shift) * make_phase(shift=shift) * make_coupler(shift=shift)
 
 
-def make_crosser(draw_sep=False, shift=0):
+def make_crosser(shift=0, draw_sep=False):
     def draw_crosser(pos: np.ndarray, **kwargs):
         top_left = pos
         top_right = pos + a(options["crosser_width"], 0)
@@ -366,7 +366,7 @@ def make_crosser(draw_sep=False, shift=0):
     return crosser
 
 
-def make_ring(phase_param=None, gamma=sympy.S.One, shift=0, draw_sep=False):
+def make_ring(shift=0, phase_param=None, gamma=sympy.S.One, draw_sep=False):
     def draw_ring(pos: np.ndarray, param_name):
         left = pos
         right = pos + a(options["ring_width"], 0)

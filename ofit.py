@@ -176,7 +176,20 @@ class Component(object):
         self.schematics = [schematic]
         self.dof = dof
 
-        # initial shifting
+        # # initial shifting
+        # if shift == 1:
+        #     self.shift_up()
+        # elif shift == -1:
+        #     self.shift_down()
+        # elif shift == -2:
+        #     self.shift_down()
+        #     self.shift_down()
+        # elif shift == 0:
+        #     pass
+        # else:
+        #     raise ValueError
+
+    def shift(self, shift):
         if shift == 1:
             self.shift_up()
         elif shift == -1:
@@ -287,7 +300,7 @@ def make_coupler(shift=0):
     )
     core_matrix = sympy.sqrt(0.5) * np.array([[1.0, -1j], [-1j, 1.0]], dtype=sympy.symbol.Symbol)
     comp_coupler.matrix[1:3, 1:3] = core_matrix
-
+    comp_coupler.shift(shift=shift)
     return comp_coupler
 
 
@@ -335,14 +348,18 @@ def make_phase(phase_param: str =None, shift=0, location="top", draw_sep=False):
         dof=1
     )
 
-    if location == "top":
-        core_matrix = np.array([[sympy.exp(-1j * phi), 0], [0, 1]], dtype=sympy.symbol.Symbol)
-    elif location == "bottom":
-        core_matrix = np.array([[1, 0], [0, sympy.exp(-1j * phi)]], dtype=sympy.symbol.Symbol)
-    else:
-        raise ValueError
-
+    core_matrix = np.array([[sympy.exp(-1j * phi), 0], [0, 1]], dtype=sympy.symbol.Symbol)
     comp_phase.matrix[1:3, 1:3] = core_matrix
+    comp_phase.shift(shift=shift)
+
+    # if location == "top":
+    #     core_matrix = np.array([[sympy.exp(-1j * phi), 0], [0, 1]], dtype=sympy.symbol.Symbol)
+    # elif location == "bottom":
+    #     core_matrix = np.array([[1, 0], [0, sympy.exp(-1j * phi)]], dtype=sympy.symbol.Symbol)
+    # else:
+    #     raise ValueError
+    #
+    # comp_phase.matrix[1:3, 1:3] = core_matrix
     return comp_phase
 
 

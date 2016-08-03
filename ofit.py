@@ -172,31 +172,17 @@ class Schematic(object):
 
 class Component(object):
     def __init__(self, schematic: "Schematic", shift, dof=0) -> "Component":
-        self.matrix = np.eye(4, dtype=sympy.symbol.Symbol)
+        self.matrix = np.eye(8, dtype=sympy.symbol.Symbol)
         self.schematics = [schematic]
         self.dof = dof
 
-        # # initial shifting
-        # if shift == 1:
-        #     self.shift_up()
-        # elif shift == -1:
-        #     self.shift_down()
-        # elif shift == -2:
-        #     self.shift_down()
-        #     self.shift_down()
-        # elif shift == 0:
-        #     pass
-        # else:
-        #     raise ValueError
-
     def shift(self, shift):
-        if shift == 1:
-            self.shift_up()
-        elif shift == -1:
-            self.shift_down()
-        elif shift == -2:
-            self.shift_down()
-            self.shift_down()
+        if shift > 0:
+            for i in range(abs(shift)):
+                self.shift_up()
+        elif shift < 0:
+            for i in range(abs(shift)):
+                self.shift_down()
         elif shift == 0:
             pass
         else:
@@ -220,7 +206,7 @@ class Component(object):
         def vpos_convert_index(x):
             return 1-x
 
-        positions = [0, 0, 0, 0]
+        positions = [0, 0, 0, 0, 0, 0, 0, 0]
         draw_code = ""
 
         separator_x_coords = []

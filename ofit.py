@@ -276,6 +276,12 @@ class Component(object):
         vfunc = np.vectorize(change_complex)
         return vfunc(self.matrix[3:5, 3:5])
 
+    def isolate(self):
+        inner_matrix = self.matrix[3:5, 3:5].copy()
+        new_matrix = np.eye(8, dtype=sympy.symbol.Symbol)
+        new_matrix[3:5, 3:5] = inner_matrix
+        self.matrix = new_matrix
+
 
 def make_coupler(shift=0):
     comp_coupler = Component(schematic=Schematic(

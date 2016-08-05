@@ -372,6 +372,54 @@ def make_crosser(shift=0, draw_sep=False):
     return crosser
 
 
+def make_switch_up(shift=0, draw_sep=False):
+    def draw_switch_up(pos: np.ndarray, **kwargs):
+        top_right = pos + a(options["crosser_width"], 0)
+        bottom_left = pos + a(0, -options["unit_height"])
+
+        draw_code = "% drawing switch_up\n"
+        draw_code += draw_arm(bottom_left, top_right)
+        return draw_code
+
+    switch_up = Component(
+        schematic=Schematic(
+            w=options["crosser_width"],
+            height_slots=2,
+            draw_fun=draw_switch_up,
+            draw_sep=draw_sep
+        ),
+        shift=shift
+    )
+    core_matrix = np.array([[0, 1], [0, 0]], dtype=sympy.symbol.Symbol)
+    switch_up.matrix[3:5, 3:5] = core_matrix
+    switch_up.shift(shift=shift)
+    return switch_up
+
+
+def make_switch_down(shift=0, draw_sep=False):
+    def draw_switch_down(pos: np.ndarray, **kwargs):
+        top_left = pos
+        bottom_right = pos + a(options["crosser_width"], -options["unit_height"])
+
+        draw_code = "% drawing switch_down\n"
+        draw_code += draw_arm(top_left, bottom_right)
+        return draw_code
+
+    switch_down = Component(
+        schematic=Schematic(
+            w=options["crosser_width"],
+            height_slots=2,
+            draw_fun=draw_switch_down,
+            draw_sep=draw_sep
+        ),
+        shift=shift
+    )
+    core_matrix = np.array([[0, 0], [1, 0]], dtype=sympy.symbol.Symbol)
+    switch_down.matrix[3:5, 3:5] = core_matrix
+    switch_down.shift(shift=shift)
+    return switch_down
+
+
 def make_ring(shift=0, phase_param=None, gamma=sympy.S.One, draw_sep=False):
     def draw_ring(pos: np.ndarray, param_name):
         left = pos

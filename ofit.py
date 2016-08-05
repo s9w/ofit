@@ -171,7 +171,7 @@ class Schematic(object):
 
 
 class Component(object):
-    def __init__(self, schematic: "Schematic", shift, dof=0) -> "Component":
+    def __init__(self, schematic: "Schematic", dof=0) -> "Component":
         self.matrix = np.eye(8, dtype=sympy.symbol.Symbol)
         self.schematics = [schematic]
         self.dof = dof
@@ -287,8 +287,7 @@ def make_coupler(shift=0):
     comp_coupler = Component(schematic=Schematic(
         w=options["coupler_width"],
         height_slots=2,
-        draw_fun=draw_coupler),
-        shift=shift
+        draw_fun=draw_coupler)
     )
     core_matrix = sympy.sqrt(0.5) * np.array([[1.0, -1j], [-1j, 1.0]], dtype=sympy.symbol.Symbol)
     comp_coupler.matrix[3:5, 3:5] = core_matrix
@@ -303,8 +302,7 @@ def make_delay(shift=0, draw_sep=False):
             height_slots=1,
             draw_fun=draw_delay,
             draw_sep=draw_sep
-        ),
-        shift=shift
+        )
     )
 
     core_matrix = np.array([[options["zm1"], 0], [0, 1]], dtype=sympy.symbol.Symbol)
@@ -331,7 +329,6 @@ def make_phase(shift=0, phase_param: str =None, draw_sep=False):
             param_name=phi.name,
             draw_sep=draw_sep
         ),
-        shift=shift,
         dof=1
     )
 
@@ -363,8 +360,7 @@ def make_crosser(shift=0, draw_sep=False):
             height_slots=2,
             draw_fun=draw_crosser,
             draw_sep=draw_sep
-        ),
-        shift=shift
+        )
     )
     core_matrix = np.array([[0, 1], [1, 0]], dtype=sympy.symbol.Symbol)
     crosser.matrix[3:5, 3:5] = core_matrix
@@ -387,8 +383,7 @@ def make_switch_up(shift=0, draw_sep=False):
             height_slots=2,
             draw_fun=draw_switch_up,
             draw_sep=draw_sep
-        ),
-        shift=shift
+        )
     )
     core_matrix = np.array([[0, 1], [0, 0]], dtype=sympy.symbol.Symbol)
     switch_up.matrix[3:5, 3:5] = core_matrix
@@ -411,8 +406,7 @@ def make_switch_down(shift=0, draw_sep=False):
             height_slots=2,
             draw_fun=draw_switch_down,
             draw_sep=draw_sep
-        ),
-        shift=shift
+        )
     )
     core_matrix = np.array([[0, 0], [1, 0]], dtype=sympy.symbol.Symbol)
     switch_down.matrix[3:5, 3:5] = core_matrix
@@ -457,7 +451,6 @@ def make_ring(shift=0, phase_param=None, gamma=sympy.S.One, draw_sep=False):
             param_name=phase_factor.name,
             draw_sep=draw_sep
         ),
-        shift=shift,
         dof=1
     )
 

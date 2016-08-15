@@ -26,15 +26,15 @@ options = {
     "phase_width": 0.5,
 
     # delay
-    "delay_width": 0.8,
+    "delay_width": 0.5,
     "delay_height": 0.3,
 
     # crossing element
     "crosser_width": 1,
 
     # ring
-    "ring_width": 0.8,
-    "ring_diameter": 0.8
+    "ring_width": 0.5,
+    "ring_diameter": 0.6
 }
 
 used_names = set()
@@ -58,7 +58,7 @@ def draw_rect(middle: np.ndarray, width, height):
 
 
 def draw_delay(pos: np.ndarray, **kwargs):
-    delay_width_frac = 0.5
+    delay_width_frac = 0.9
     delay_main_width = delay_width_frac * options["delay_width"]
     straight_width = (options["delay_width"] - delay_main_width) / 2
     p1 = pos
@@ -305,7 +305,7 @@ def make_delay(shift=0, draw_sep=False):
         )
     )
 
-    core_matrix = np.array([[options["zm1"], 0], [0, 1]], dtype=sympy.symbol.Symbol)
+    core_matrix = np.array([[options["zm1"]*Symbol("gamma"), 0], [0, 1]], dtype=sympy.symbol.Symbol)
     comp_delay.matrix[3:5, 3:5] = core_matrix
     comp_delay.shift(shift=shift)
 
@@ -414,7 +414,7 @@ def make_switch_down(shift=0, draw_sep=False):
     return switch_down
 
 
-def make_ring(shift=0, phase_param=None, gamma=sympy.S.One, draw_sep=False):
+def make_ring(shift=0, phase_param=None, draw_sep=False):
     def draw_ring(pos: np.ndarray, param_name):
         left = pos
         right = pos + a(options["ring_width"], 0)
@@ -428,7 +428,7 @@ def make_ring(shift=0, phase_param=None, gamma=sympy.S.One, draw_sep=False):
         draw_code += "\draw [thick] {} circle [radius={}];\n".format(
             tt(ring_center), ring_radius
         )
-        draw_code += draw_rect(phase_pos, options["ring_diameter"]*0.5, options["ring_diameter"]*0.3)
+        draw_code += draw_rect(phase_pos, options["phase_width"]*0.8, options["delay_height"])
         draw_code += "\\node [scale=0.5] at {} {{{}}};\n".format(
             tt(phase_pos), texify_param(param_name)
         )
@@ -440,6 +440,7 @@ def make_ring(shift=0, phase_param=None, gamma=sympy.S.One, draw_sep=False):
     phase_factor = make_symbol(phase_param)
     phase_term = sympy.exp(-sympy.I * phase_factor)
     zm1 = options["zm1"]
+    gamma = Symbol("gamma")
     transfer_func = (c-gamma*zm1*phase_term)/(1-c*gamma*zm1*phase_term)
     core_matrix = np.array([[transfer_func, 0], [0, 1]], dtype=sympy.symbol.Symbol)
 

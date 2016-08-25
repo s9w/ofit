@@ -71,7 +71,7 @@ def draw_delay(pos: np.ndarray, **kwargs):
     )
 
 
-def draw_phase(pos: np.ndarray, param_name):
+def draw_phase(pos: np.ndarray, param_names):
     p_left = pos
     p_middle = pos + a(options["phase_width"] / 2, 0)
     p_right = pos + a(options["phase_width"], 0)
@@ -86,7 +86,7 @@ def draw_phase(pos: np.ndarray, param_name):
     draw_code += draw_rect(p_middle, rect_width, options["delay_height"])
 
     draw_code += "\\node [scale=0.5] at {} {{{}}};\n".format(
-        tt(p_middle), texify_param(param_name)
+        tt(p_middle), texify_param(param_names[0])
     )
     return draw_code
 
@@ -161,12 +161,12 @@ def make_symbol(name=None) -> Symbol:
 
 
 class Schematic(object):
-    def __init__(self, w, height_slots, draw_fun, param_name=None, draw_sep=False) -> "Schematic":
+    def __init__(self, w, height_slots, draw_fun, param_names=[], draw_sep=False) -> "Schematic":
         self.draw_fun = draw_fun
         self.width = w
         self.height_slots = height_slots
         self.vpos = 0
-        self.param_name = param_name
+        self.param_names = param_names
         self.draw_sep = draw_sep
 
 
@@ -234,7 +234,7 @@ class Component(object):
                 raise ValueError
 
             pos = a(pos_x, sch.vpos)
-            draw_code += sch.draw_fun(pos, param_name=sch.param_name) + "\n"
+            draw_code += sch.draw_fun(pos, param_names=sch.param_names) + "\n"
             if sch.draw_sep:
                 separator_x_coords.append(pos_x)
 
@@ -326,7 +326,7 @@ def make_phase(shift=0, phase_param: str =None, draw_sep=False):
             w=options["phase_width"],
             height_slots=1,
             draw_fun=draw_phase,
-            param_name=phi.name,
+            param_names=[phi.name],
             draw_sep=draw_sep
         ),
         dof=1
@@ -415,7 +415,7 @@ def make_switch_down(shift=0, draw_sep=False):
 
 
 def make_ring(shift=0, phase_param=None, draw_sep=False):
-    def draw_ring(pos: np.ndarray, param_name):
+    def draw_ring(pos: np.ndarray, param_names):
         left = pos
         right = pos + a(options["ring_width"], 0)
         middle = pos + a(options["ring_width"]/2, 0)
@@ -430,7 +430,7 @@ def make_ring(shift=0, phase_param=None, draw_sep=False):
         )
         draw_code += draw_rect(phase_pos, options["phase_width"]*0.8, options["delay_height"])
         draw_code += "\\node [scale=0.5] at {} {{{}}};\n".format(
-            tt(phase_pos), texify_param(param_name)
+            tt(phase_pos), texify_param(param_names[0])
         )
 
         return draw_code
@@ -449,10 +449,65 @@ def make_ring(shift=0, phase_param=None, draw_sep=False):
             w=options["ring_width"],
             height_slots=1,
             draw_fun=draw_ring,
-            param_name=phase_factor.name,
+            param_names=[phase_factor.name],
             draw_sep=draw_sep
         ),
         dof=1
+    )
+
+    component.matrix[3:5, 3:5] = core_matrix
+    component.shift(shift=shift)
+    return component
+
+def make_ring2(shift=0, phase_param=None, draw_sep=False):
+    def draw_ring2(pos: np.ndarray, param_names):
+        left = pos
+        right = pos + a(options["ring_width"], 0)
+        middle = pos + a(options["ring_width"]/2, 0)
+        phase_pos_upper = middle + a(0, options["ring_diameter"])
+        phase_pos_lower = middle + a(0, 0)
+        ring_center = middle + a(0, options["ring_diameter"]/2)
+        ring_radius = options["ring_diameter"]/2
+
+        draw_code = "% drawing ring\n"
+        draw_code += draw_line(left, right)
+        draw_code += "\draw [thick] {} circle [radius={}];\n".format(
+            tt(ring_center), ring_radius
+        )
+
+        # upper phase
+        draw_code += draw_rect(phase_pos_upper, options["phase_width"]*0.8, options["delay_height"])
+        draw_code += "\\node [scale=0.5] at {} {{{}}};\n".format(
+            tt(phase_pos_upper), texify_param(param_names[0])
+        )
+
+        # lower phase
+        draw_code += draw_rect(phase_pos_lower, options["phase_width"] * 0.8, options["delay_height"])
+        draw_code += "\\node [scale=0.5] at {} {{{}}};\n".format(
+            tt(phase_pos_lower), texify_param(param_names[1])
+        )
+
+        return draw_code
+
+    # transfer function
+    coupler_phase = make_symbol(phase_param)
+    c = sympy.cos(coupler_phase)
+    phase_factor = make_symbol(phase_param)
+    phase_term = sympy.exp(-sympy.I * phase_factor)
+    zm1 = options["zm1"]
+    gamma = Symbol("gamma")
+    transfer_func = (c-gamma*zm1*phase_term)/(1-c*gamma*zm1*phase_term)
+    core_matrix = np.array([[transfer_func, 0], [0, 1]], dtype=sympy.symbol.Symbol)
+
+    component = Component(
+        schematic=Schematic(
+            w=options["ring_width"],
+            height_slots=1,
+            draw_fun=draw_ring2,
+            param_names=[phase_factor.name, coupler_phase.name],
+            draw_sep=draw_sep
+        ),
+        dof=2
     )
 
     component.matrix[3:5, 3:5] = core_matrix

@@ -166,6 +166,7 @@ class Schematic(object):
         self.width = w
         self.height_slots = height_slots
         self.vpos = 0
+        self.isolate_left = False
 
         if param_names is None:
             self.param_names = []
@@ -222,7 +223,7 @@ class Component(object):
                 pos_x = max(positions[array_index], positions[array_index+1])
 
                 # leftover space to cover with line
-                if not math.isclose(x1, x2):
+                if not math.isclose(x1, x2) and not math.isclose(min(x1,x2), 0) and not sch.isolate_left:
                     if x1 < x2:
                         y = 1 - array_index
                     else:
@@ -285,6 +286,7 @@ class Component(object):
         new_matrix = np.eye(8, dtype=sympy.symbol.Symbol)
         new_matrix[3:5, 3:5] = inner_matrix
         self.matrix = new_matrix
+        self.schematics[0].isolate_left = True
 
 
 def make_coupler(shift=0):

@@ -227,7 +227,7 @@ class Component(object):
                         y = 1 - array_index
                     else:
                         y = 1 - (array_index+1)
-                    draw_code += draw_line(a(x1, y), a(x2, y))
+                    draw_code += draw_line(a(x1, y*options["unit_height"]), a(x2, y*options["unit_height"]))
 
                 positions[array_index] = pos_x + sch.width
                 positions[array_index+1] = pos_x + sch.width
@@ -237,7 +237,7 @@ class Component(object):
             else:
                 raise ValueError
 
-            pos = a(pos_x, sch.vpos)
+            pos = a(pos_x, sch.vpos * options["unit_height"])
             draw_code += sch.draw_fun(pos, param_names=sch.param_names) + "\n"
             if sch.draw_sep:
                 separator_x_coords.append(pos_x)

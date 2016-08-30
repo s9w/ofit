@@ -161,12 +161,16 @@ def make_symbol(name=None) -> Symbol:
 
 
 class Schematic(object):
-    def __init__(self, w, height_slots, draw_fun, param_names=[], draw_sep=False) -> "Schematic":
+    def __init__(self, w, height_slots, draw_fun, param_names=None, draw_sep=False) -> "Schematic":
         self.draw_fun = draw_fun
         self.width = w
         self.height_slots = height_slots
         self.vpos = 0
-        self.param_names = param_names
+
+        if param_names is None:
+            self.param_names = []
+        else:
+            self.param_names = param_names
         self.draw_sep = draw_sep
 
 

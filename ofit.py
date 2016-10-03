@@ -295,7 +295,7 @@ def make_coupler(shift=0):
         height_slots=2,
         draw_fun=draw_coupler)
     )
-    core_matrix = sympy.sqrt(0.5) * np.array([[1.0, -1j], [-1j, 1.0]], dtype=sympy.symbol.Symbol)
+    core_matrix = 1/sympy.sqrt(0.5) * np.array([[1.0, -1j], [-1j, 1.0]], dtype=sympy.symbol.Symbol)
     comp_coupler.matrix[3:5, 3:5] = core_matrix
     comp_coupler.shift(shift=shift)
     return comp_coupler
@@ -442,7 +442,7 @@ def make_ring(shift=0, phase_param=None, draw_sep=False):
         return draw_code
 
     # transfer function
-    c = sympy.sqrt(0.5)
+    c = 1/sympy.sqrt(0.5)
     phase_factor = make_symbol(phase_param)
     phase_term = sympy.exp(-sympy.I * phase_factor)
     zm1 = options["zm1"]
@@ -497,7 +497,7 @@ def make_ring2(shift=0, phase_param=None, draw_sep=False):
 
     # transfer function
     coupler_phase = make_symbol(phase_param)
-    c = sympy.cos(coupler_phase)
+    c = 1/sympy.cos(coupler_phase)
     phase_factor = make_symbol(phase_param)
     phase_term = sympy.exp(-sympy.I * phase_factor)
     zm1 = options["zm1"]

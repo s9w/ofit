@@ -38,6 +38,7 @@ options = {
 }
 
 used_names = set()
+used_names_kappas = set()
 
 
 def draw_line(left, right):
@@ -157,6 +158,23 @@ def make_symbol(name=None) -> Symbol:
             raise ValueError("Filter parameter name \"{}\" already used.".format(name))
         else:
             used_names.add(name)
+            return Symbol(name)
+
+def make_symbol_kappa(name=None) -> Symbol:
+    # generate automatic name
+    if not name:
+        for i in range(999):
+            name = "kappa_{}".format(i)
+            if name not in used_names_kappas:
+                used_names_kappas.add(name)
+                return Symbol(name)
+
+    # check if name isn't already used
+    else:
+        if name in used_names_kappas:
+            raise ValueError("Filter parameter name \"{}\" already used.".format(name))
+        else:
+            used_names_kappas.add(name)
             return Symbol(name)
 
 
@@ -301,6 +319,21 @@ def make_coupler(shift=0):
     return comp_coupler
 
 
+def make_coupler_f(shift=0):
+    comp_coupler = Component(schematic=Schematic(
+        w=options["coupler_width"],
+        height_slots=2,
+        draw_fun=draw_coupler)
+    )
+    kappa = make_symbol_kappa()
+    c = sympy.sqrt(1 - kappa)
+    s = sympy.sqrt(kappa)
+    core_matrix = np.array([[c, -1j*s], [-1j*s, c]], dtype=sympy.symbol.Symbol)
+    comp_coupler.matrix[3:5, 3:5] = core_matrix
+    comp_coupler.shift(shift=shift)
+    return comp_coupler
+
+
 def make_delay(shift=0, draw_sep=False):
     comp_delay = Component(
         schematic=Schematic(
@@ -346,6 +379,10 @@ def make_phase(shift=0, phase_param: str =None, draw_sep=False):
 
 def make_mzi(shift=0):
     return make_coupler(shift=shift) * make_phase(shift=shift) * make_coupler(shift=shift)
+
+
+def make_mzi_f(shift=0):
+    return make_coupler_f(shift=shift) * make_phase(shift=shift) * make_coupler_f(shift=shift)
 
 
 def make_crosser(shift=0, draw_sep=False):
